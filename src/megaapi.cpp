@@ -1034,6 +1034,11 @@ char *MegaApi::getMyUserHandle()
     return pImpl->getMyUserHandle();
 }
 
+char *MegaApi::getMyXMPPJid()
+{
+    return pImpl->getMyXMPPJid();
+}
+
 void MegaApi::setLogLevel(int logLevel)
 {
     MegaApiImpl::setLogLevel(logLevel);
@@ -1710,6 +1715,11 @@ MegaNodeList* MegaApi::getInShares()
     return pImpl->getInShares();
 }
 
+MegaShareList* MegaApi::getInSharesList()
+{
+    return pImpl->getInSharesList();
+}
+
 bool MegaApi::isShared(MegaNode *node)
 {
     if (!node)
@@ -1998,6 +2008,11 @@ MegaError MegaApi::checkAccess(MegaNode* megaNode, int level)
 MegaError MegaApi::checkMove(MegaNode* megaNode, MegaNode* targetNode)
 {
     return pImpl->checkMove(megaNode, targetNode);
+}
+
+bool MegaApi::isFilesystemAvailable()
+{
+    return pImpl->isFilesystemAvailable();
 }
 
 int MegaApi::getNumChildren(MegaNode* parent)

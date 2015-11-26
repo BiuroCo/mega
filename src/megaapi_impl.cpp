@@ -2472,6 +2472,23 @@ char *MegaApiImpl::getMyUserHandle()
     return result;
 }
 
+char *MegaApiImpl::getMyXMPPJid()
+{
+    sdkMutex.lock();
+    if (ISUNDEF(client->me))
+    {
+        sdkMutex.unlock();
+        return NULL;
+    }
+
+    char jid[16];
+    Base32::btoa((const byte *)&client->me, MegaClient::USERHANDLE, jid);
+    char *result = MegaApi::strdup(jid);
+
+    sdkMutex.unlock();
+    return result;
+}
+
 void MegaApiImpl::setLogLevel(int logLevel)
 {
     if(!externalLogger)
@@ -2768,7 +2785,12 @@ void MegaApiImpl::setProxySettings(MegaProxy *proxySettings)
         url = proxySettings->getProxyURL();
 
     string localurl;
+
+#if defined(WINDOWS_PHONE) || (defined(_WIN32) && defined(USE_CURL))
+    localurl = url;
+#else
     fsAccess->path2local(&url, &localurl);
+#endif
 
     localProxySettings.setProxyURL(&localurl);
 
@@ -2779,14 +2801,24 @@ void MegaApiImpl::setProxySettings(MegaProxy *proxySettings)
             username = proxySettings->getUsername();
 
         string localusername;
+
+#if defined(WINDOWS_PHONE) || (defined(_WIN32) && defined(USE_CURL))
+        localusername = username;
+#else
         fsAccess->path2local(&username, &localusername);
+#endif
 
         string password;
         if(proxySettings->getPassword())
             password = proxySettings->getPassword();
 
         string localpassword;
+
+#if defined(WINDOWS_PHONE) || (defined(_WIN32) && defined(USE_CURL))
+        localpassword = password;
+#else
         fsAccess->path2local(&password, &localpassword);
+#endif
 
         localProxySettings.setCredentials(&localusername, &localpassword);
     }
@@ -4330,6 +4362,33 @@ MegaNodeList* MegaApiImpl::getInShares()
     MegaNodeList *nodeList = new MegaNodeListPrivate(vNodes.data(), vNodes.size());
     sdkMutex.unlock();
 	return nodeList;
+}
+
+MegaShareList* MegaApiImpl::getInSharesList()
+{
+    sdkMutex.lock();
+
+    vector<Share*> vShares;
+    handle_vector vHandles;
+
+    for(user_map::iterator it = client->users.begin(); it != client->users.end(); it++)
+    {
+        User *user = &(it->second);
+        Node *n;
+
+        for (handle_set::iterator sit = user->sharing.begin(); sit != user->sharing.end(); sit++)
+        {
+            if ((n = client->nodebyhandle(*sit)) && !n->parent)
+            {
+                vShares.push_back(n->inshare);
+                vHandles.push_back(n->nodehandle);
+            }
+        }
+    }
+
+    MegaShareList *shareList = new MegaShareListPrivate(vShares.data(), vHandles.data(), vShares.size());
+    sdkMutex.unlock();
+    return shareList;
 }
 
 bool MegaApiImpl::isPendingShare(MegaNode *megaNode)
@@ -7279,7 +7338,15 @@ MegaError MegaApiImpl::checkMove(MegaNode* megaNode, MegaNode* targetNode)
 	MegaError e(client->checkmove(node,target));
     sdkMutex.unlock();
 
-	return e;
+    return e;
+}
+
+bool MegaApiImpl::isFilesystemAvailable()
+{
+    sdkMutex.lock();
+    bool result = client->nodebyhandle(client->rootnodes[0]) != NULL;
+    sdkMutex.unlock();
+    return result;
 }
 
 bool MegaApiImpl::nodeComparatorDefaultASC (Node *i, Node *j)
